@@ -7,15 +7,15 @@ from cloudshell.shell.core.context_utils import get_attribute_by_name_wrapper, g
 class SDNController(object):
 
 
-    def __init__(self,ip,port,username,password,utl_prefix):
+    def __init__(self,ip,port,username,password,path,container,utl_prefix):
 
 
         self.attributes = {'ip':ip,
                       'port':port,
                       'username':username,
                       'password':password,
-                      'path':'',
-                      'container':'',
+                      'path':path,
+                      'container':container,
                       'utl_prefix':utl_prefix}
 
         self._base_url = None
@@ -23,11 +23,7 @@ class SDNController(object):
         self.auth = None
         self.build_credentials()
 
-    def build_connection(self, path,container,northbound_api_component, query):
-
-        self.attributes['path'] = path
-        self.attributes['container'] = container
-
+    def build_connection(self, northbound_api_component, query):
 
         self.build_request_url(northbound_api_component, query)
 
