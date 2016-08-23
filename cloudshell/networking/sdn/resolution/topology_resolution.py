@@ -15,6 +15,7 @@ class SDNTopologyResolution(object):
         self.edges = None
         self.topology = None
         self.switches_ports = dict()
+        self.leaf_switches_list = []
 
 
     @property
@@ -55,7 +56,7 @@ class SDNTopologyResolution(object):
             self.diGraph.add_node(node['node']['id'])
 
     def get_topology(self):
-        self.topology = self.controller.get_query('resolution', '')
+        self.topology = self.controller.get_query('topology', '')
 
     def get_switches(self):
         self.switches_list = self.controller.get_query('switchmanager', '/nodes')
@@ -70,13 +71,17 @@ class SDNTopologyResolution(object):
             self.diGraph.add_edge(*e)
 
     def get_leaf_switches(self):
-        return self.lowest_centrality(nx.betweenness_centrality(self.graph, endpoints=True))
+        leaf_switches_tuple = self.lowest_centrality(nx.betweenness_centrality(self.graph, endpoints=True))
+        map(lambda x: self.leaf_switches_list.append(x[1]) if x[1] not in self.leaf_switches_list else False, leaf_switches_tuple)
+        return self.leaf_switches_list
+
 
 
     def lowest_centrality(self,centrality_dict):
         cent_items = [(b, a) for (a, b) in centrality_dict.iteritems() if b == min(centrality_dict.values())]
         cent_items.sort()
-        return tuple((cent_items))
+        return cent_items
+
 
 
     def get_routing_path_between_two_endpoints(self,srcNode,dstNode):
@@ -122,6 +127,7 @@ if __name__=="__main__":
     c.build_graph()
     c.get_switches_ports()
     print c.switches_ports
+    print c.get_leaf_switches()
 
 
 
