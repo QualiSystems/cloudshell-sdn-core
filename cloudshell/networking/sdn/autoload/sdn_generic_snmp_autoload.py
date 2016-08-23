@@ -1,3 +1,10 @@
+__author__ = "Luiza Nacshon"
+__copyright__ = ""
+__license__ = ""
+__version__ = "1.0.0"
+__email__ = "luiza.n@quali.com"
+__status__ = "Development"
+
 import re
 import inject
 from cloudshell.shell.core.driver_context import AutoLoadDetails
