@@ -3,10 +3,11 @@ import inject
 from cloudshell.shell.core.driver_context import AutoLoadDetails
 from cloudshell.networking.autoload.networking_autoload_resource_attributes import NetworkingStandardRootAttributes
 from cloudshell.networking.sdn.configuration.cloudshell_controller_configuration import CONTROLLER_HANDLER
+from cloudshell.networking.sdn.configuration.cloudshell_controller_binding_keys import TOPOLOGY_HANDLER
 from cloudshell.shell.core.driver_context import AutoLoadAttribute
 class SDNGenericSNMPAutoload():
 
-    def __init__(self, controller_handler=None, logger=None, vendor='ODL-Hellium'):
+    def __init__(self, controller_handler=None,network_handler = None, logger=None, vendor='ODL-Hellium'):
         """Basic init with  handler and logger
 
         :param snmp_handler:
@@ -16,6 +17,7 @@ class SDNGenericSNMPAutoload():
 
 
         self._controller = controller_handler
+        self._topology = network_handler
 
 
         self.port_list = []
@@ -46,11 +48,20 @@ class SDNGenericSNMPAutoload():
     def controller(self):
         if self._controller is None:
             try:
-
                 self._controller = inject.instance(CONTROLLER_HANDLER)
             except:
                 raise Exception('SDNAutoload', 'controller handler is none or empty')
         return self._controller
+
+
+    @property
+    def topology(self):
+        if self._topology is None:
+            try:
+                self._topology = inject.instance(TOPOLOGY_HANDLER)
+            except:
+                raise Exception('SDNAutoload', 'controller handler is none or empty')
+        return self._topology
 
     def discover(self):
         """Load device structure and attributes: chassis, modules, submodules, ports, port-channels and power supplies
@@ -64,25 +75,10 @@ class SDNGenericSNMPAutoload():
         self.logger.info('*'*10)
         self.logger.info('Starting huawei SNMP discovery process')
         self.get_controller_properies()
-        self.load_huawei_mib()
-        self._get_device_details()
-        self.snmp.load_mib(['HUAWEI-PORT-MIB'])
-        self._load_snmp_objects_and_tables()
 
 
-        if len(self.chassis_list) < 1:
-            self.logger.error('Entity table error, no chassis found')
-            return AutoLoadDetails(list(), list())
+        self.get_switches_list()
 
-        for chassis in self.chassis_list:
-            if chassis not in self.exclusion_list:
-                chassis_id = self._get_resource_id(chassis)
-                if chassis_id == '-1':
-                    chassis_id = '0'
-                self.relative_path[chassis] = chassis_id
-
-        self._filter_lower_bay_containers()
-        self.get_module_list()
         self.add_relative_paths()
         self._get_chassis_attributes(self.chassis_list)
         self._get_ports_attributes()
@@ -111,7 +107,12 @@ class SDNGenericSNMPAutoload():
 
 
     def get_controller_properies(self):
-        data =  self.controller.get_query('controllermanager','/properties')
+
+        controller_id = 0
+
+        self.relative_path['controller'] = controller_id
+
+        data = self.controller.get_query('controllermanager','/properties')
 
         system_name = data['properties'].get('name')
         mac_address = data['properties'].get('macAddress')
@@ -131,11 +132,38 @@ class SDNGenericSNMPAutoload():
         self.attributes.extend(root.get_autoload_resource_attributes())
         self.logger.info('Load controller Attributes completed.')
 
+    def get_switches_list(self):
 
     def get_edge_switches(self):pass
     def get_edge_switches_ports(self):pass
 
+    def _get_module_attributes(self):
+        """Set attributes for all discovered modules
 
+        :return:
+        """
+
+        self.logger.info('Start loading Modules')
+        for module in self.module_list:
+            module_id = self.relative_path[module]
+            module_index = self._get_resource_id(module)
+            module_details_map = {
+                'module_model': self.entity_table[module]['entPhysicalDescr'],
+                'version': self.snmp.get_property('ENTITY-MIB', 'entPhysicalSoftwareRev', module),
+                'serial_number': self.snmp.get_property('ENTITY-MIB', 'entPhysicalSerialNum', module)
+            }
+
+            if '/' in module_id and len(module_id.split('/')) < 3:
+                module_name = 'Module {0}'.format(module_index)
+                model = 'Generic Module'
+            else:
+                module_name = 'Sub Module {0}'.format(module_index)
+                model = 'Generic Sub Module'
+            module_object = Module(name=module_name, model=model, relative_path=module_id, **module_details_map)
+            self._add_resource(module_object)
+
+            self.logger.info('Module {} added'.format(self.entity_table[module]['entPhysicalDescr']))
+        self.logger.info('Load modules completed.')
 
     def _filter_lower_bay_containers(self):
 

@@ -16,6 +16,6 @@ def bindings(binder):
 
 
     try:
-        binder.bind_to_provider('topology_handler', config.TOPLOGY_HANDLER)
+        binder.bind_to_provider('topology_handler', config.TOPOLOGY_HANDLER)
     except inject.InjectorException:
         pass

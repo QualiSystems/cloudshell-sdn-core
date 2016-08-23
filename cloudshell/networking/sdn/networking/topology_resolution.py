@@ -55,7 +55,7 @@ class SDNTopologyResolution(object):
             self.diGraph.add_node(node['node']['id'])
 
     def get_topology(self):
-        self.topology = self.controller.get_query('topology', '')
+        self.topology = self.controller.get_query('networking', '')
 
     def get_switches(self):
         self.switches_list = self.controller.get_query('switchmanager', '/nodes')
