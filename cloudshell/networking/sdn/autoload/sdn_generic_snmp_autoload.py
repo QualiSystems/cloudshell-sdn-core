@@ -3,7 +3,7 @@ import inject
 from cloudshell.shell.core.driver_context import AutoLoadDetails
 from cloudshell.networking.autoload.networking_autoload_resource_attributes import NetworkingStandardRootAttributes
 from cloudshell.networking.sdn.configuration.cloudshell_controller_configuration import CONTROLLER_HANDLER
-
+from cloudshell.shell.core.driver_context import AutoLoadAttribute
 class SDNGenericSNMPAutoload():
 
     def __init__(self, controller_handler=None, logger=None, vendor='ODL-Hellium'):
@@ -38,7 +38,7 @@ class SDNGenericSNMPAutoload():
             try:
                 self._logger = inject.instance('logger')
             except:
-                raise Exception('HuaweiAutoload', 'Logger is none or empty')
+                raise Exception('SDNAutoload', 'Logger is none or empty')
         return self._logger
 
 
@@ -58,12 +58,12 @@ class SDNGenericSNMPAutoload():
         :return: AutoLoadDetails object
         """
 
-        self.controller.prepare()
-        self._is_valid_device_os()
+
+
 
         self.logger.info('*'*10)
         self.logger.info('Starting huawei SNMP discovery process')
-
+        self.get_controller_properies()
         self.load_huawei_mib()
         self._get_device_details()
         self.snmp.load_mib(['HUAWEI-PORT-MIB'])
@@ -108,32 +108,32 @@ class SDNGenericSNMPAutoload():
         self.logger.info('SNMP discovery Completed')
         return result
 
-    def _is_valid_device_os(self):
-        """Validate device OS using snmp
-        :return: True or False
-        """
-
-        version = None
-        if not self.supported_os:
-            config = inject.instance('config')
-            self.supported_os = config.SUPPORTED_OS
-        system_description = self.sys_descr
-        print system_description
-        match_str = re.sub('[\n\r]+', ' ', system_description.upper())
-        res = re.search('\s+(VRP)\s*', match_str)
-        if res:
-            version = res.group(0).strip(' \s\r\n')
-        if version and version in self.supported_os:
-            return
-
-        self.logger.info('System description from device: \'{0}\''.format(system_description))
-
-        error_message = 'Incompatible driver! Please use correct resource driver for {0} operation system(s)'. \
-            format(str(tuple(self.supported_os)))
-        self.logger.error(error_message)
-        raise Exception(error_message)
 
 
+    def get_controller_properies(self):
+        data =  self.controller.get_query('controllermanager','/properties')
+
+        system_name = data['properties'].get('name')
+        mac_address = data['properties'].get('macAddress')
+
+        self.logger.info('Load Controller Attributes:')
+        result = {'system_name': system_name,
+                  'vendor': self.vendor,
+                  'model': '',
+                  'location': '',
+                  'contact': 'ODL',
+                  'version': ''}
+
+        root = NetworkingStandardRootAttributes(**result)
+
+        setattr(root,'mac_address', AutoLoadAttribute('', 'Mac Address', mac_address))
+
+        self.attributes.extend(root.get_autoload_resource_attributes())
+        self.logger.info('Load controller Attributes completed.')
+
+
+    def get_edge_switches(self):pass
+    def get_edge_switches_ports(self):pass
 
 
 

@@ -13,3 +13,9 @@ def bindings(binder):
         binder.bind_to_provider('controller_handler', config.CONTROLLER_HANDLER)
     except inject.InjectorException:
         pass
+
+
+    try:
+        binder.bind_to_provider('topology_handler', config.TOPLOGY_HANDLER)
+    except inject.InjectorException:
+        pass

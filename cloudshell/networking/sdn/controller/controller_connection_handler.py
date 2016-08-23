@@ -23,18 +23,28 @@ class SDNController(object):
         self.auth = None
         self.build_credentials()
 
-    def build_connection(self, northbound_api_component, query):
-
-        self.build_request_url(northbound_api_component, query)
 
 
-    def build_request_url(self, northbound_api_component, query):
+    def build_credentials(self):
+        self.auth = HTTPBasicAuth(self.attributes['username'],self.attributes['password'])
 
-        self._base_url = self.attributes['utl_prefix'] + self.attributes['hostname'] + ':' + \
+    def get_query(self, northbound_api_component, query):
+
+        data = dict()
+        self._base_url = self.attributes['utl_prefix'] + self.attributes['ip'] + ':' + \
                          self.attributes['port'] + self.attributes['path']
 
         self.url = self._base_url + northbound_api_component + '/' + self.attributes['container'] + query
 
-    def build_credentials(self):
-        self.auth = HTTPBasicAuth(self.attributes['username'],self.attributes['password'])
+        response = requests.get(url=self.url, auth=self.auth)
+
+        if response.status_code == 200:
+            data = response.json()
+            print data
+
+        else:
+            raise Exception('controller connection handler', 'query response is empty')
+
+        return data
+
 
