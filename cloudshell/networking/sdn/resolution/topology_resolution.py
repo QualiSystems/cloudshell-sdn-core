@@ -6,7 +6,7 @@ __email__ = "luiza.n@quali.com"
 __status__ = "Development"
 
 
-import json
+
 import networkx as nx
 
 import inject
@@ -24,6 +24,8 @@ class SDNTopologyResolution(object):
         self.topology = None
         self.switches_ports = dict()
         self.leaf_switches_list = []
+
+        self.build_graph()
 
 
     @property
@@ -107,8 +109,15 @@ class SDNTopologyResolution(object):
             if(self.switches_ports.get(tailedge_id)==None):
                 self.switches_ports[tailedge_id] = {}
             self.switches_ports[tailedge_id][edge['properties']['name']['value']] = {'bandwidth':edge['properties']['bandwidth']['value']}
+        return self.switches_ports
 
 
+import random
+def uniqueid():
+    seed = random.getrandbits(32)
+    while True:
+       yield seed
+       seed += 1
 
 if __name__=="__main__":
     from cloudshell.networking.sdn.controller.controller_connection_handler import SDNController
@@ -136,6 +145,18 @@ if __name__=="__main__":
     c.get_switches_ports()
     print c.switches_ports
     print c.get_leaf_switches()
+    resource_id = dict()
+    relative_path = dict()
+    unique_sequence = uniqueid()
+    for index,switch in enumerate(c.leaf_switches_list, start=1):
+        resource_id[switch] = int(next(unique_sequence))
+        relative_path[switch] = 0
+
+    for dedicated_switch in c.switches_ports:
+        for index,port in enumerate(c.switches_ports[dedicated_switch],start=1):
+            resource_id[port] = int(next(unique_sequence))
+            if resource_id.get(dedicated_switch) is not None:
+                relative_path[port] = resource_id.get(dedicated_switch)
 
 
 
