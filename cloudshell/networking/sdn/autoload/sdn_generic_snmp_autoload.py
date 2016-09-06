@@ -105,7 +105,7 @@ class SDNGenericSNMPAutoload():
         self.logger.info('SNMP discovery Completed')
         return result
 
-
+#
 
     def get_controller_properies(self):
 
