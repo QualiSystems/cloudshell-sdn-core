@@ -1,5 +1,4 @@
 from cloudshell.networking.sdn.controller.controller_connection_handler import SDNController
-from cloudshell.networking.sdn.resolution.topology_resolution import SDNTopologyResolution
 from cloudshell.shell.core.context_utils import get_attribute_by_name_wrapper, get_resource_address,get_resource_port
 
 CONTROLLER_INIT_PARAMS = {'ip': get_resource_address,
@@ -22,4 +21,4 @@ def create_controller_handler():
 
 
 CONTROLLER_HANDLER = create_controller_handler
-TOPOLOGY_HANDLER = SDNTopologyResolution
+

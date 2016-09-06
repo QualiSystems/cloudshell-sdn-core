@@ -16,7 +16,7 @@ class SDNTopologyResolution(object):
 
     def __init__(self, controller_handler=None, logger=None):
 
-        self._controller = controller_handler
+        self.controller = controller_handler
         self.switches_list = []
         self.graph = None
         self.diGraph = None
@@ -37,16 +37,6 @@ class SDNTopologyResolution(object):
                 raise Exception('SDNRoutingResolution', 'Logger is none or empty')
         return self._logger
 
-
-    @property
-    def controller(self):
-        if self._controller is None:
-            try:
-
-                self._controller = inject.instance(CONTROLLER_HANDLER)
-            except:
-                raise Exception('SDNRoutingResolution', 'controller handler is none or empty')
-        return self._controller
 
     def build_graph(self):
         self.graph = nx.Graph()

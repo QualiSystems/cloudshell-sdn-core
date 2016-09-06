@@ -11,15 +11,15 @@ import random
 from cloudshell.shell.core.driver_context import AutoLoadDetails
 from cloudshell.networking.autoload.networking_autoload_resource_attributes import NetworkingStandardRootAttributes
 from cloudshell.networking.sdn.configuration.cloudshell_controller_configuration import CONTROLLER_HANDLER
-from cloudshell.networking.sdn.configuration.cloudshell_controller_binding_keys import TOPOLOGY_HANDLER
 from cloudshell.shell.core.driver_context import AutoLoadAttribute
 from cloudshell.networking.autoload.networking_autoload_resource_structure import Port, Module
+from cloudshell.networking.sdn.resolution.topology_resolution import SDNTopologyResolution
 
 class SDNGenericSNMPAutoload():
-    def __init__(self, controller_handler=None,network_handler=None, logger=None, vendor='ODL-Hellium'):
+    def __init__(self, controller_handler=None,logger=None, vendor='ODL-Hellium'):
 
         self._controller = controller_handler
-        self._topology = network_handler
+        self.topology = SDNTopologyResolution(self.controller)
 
 
         self.port_list = []
@@ -58,14 +58,6 @@ class SDNGenericSNMPAutoload():
         return self._controller
 
 
-    @property
-    def topology(self):
-        if self._topology is None:
-            try:
-                self._topology = inject.instance(TOPOLOGY_HANDLER)
-            except:
-                raise Exception('SDNAutoload', 'controller handler is none or empty')
-        return self._topology
 
     def discover(self):
         """Load device structure and attributes: chassis, modules, submodules, ports, port-channels and power supplies
@@ -82,7 +74,6 @@ class SDNGenericSNMPAutoload():
         self.get_switches_ports_dict()
         self.build_relative_path()
         self.add_relative_paths()
-
         self._get_ports_attributes()
         self._get_switches_attributes()
 
@@ -163,12 +154,12 @@ class SDNGenericSNMPAutoload():
         switches_list = self.leaf_switches_list
 
         for switch in switches_list:
-            self.relative_path[switch] = self.relative_path[switch] + '/' + self.resource_id[switch]
+            self.relative_path[switch] = str(self.relative_path[switch]) + '/' + str(self.resource_id[switch])
 
         for dedicated_switch in self.port_list:
             for port in self.port_list[dedicated_switch]:
                 if (self.relative_path.get(port)):
-                    self.relative_path[port] = self.relative_path[port] + '/' + self.resource_id[port]
+                    self.relative_path[port] = str(self.relative_path[port]) + '/' + str(self.resource_id[port])
 
     def _get_ports_attributes(self):
 
@@ -187,12 +178,13 @@ class SDNGenericSNMPAutoload():
                 attribute_map = {'l2_protocol_type': '',
                                  'mac': '',
                                  'mtu': '',
-                                 'bandwidth': self.port_list[dedicated_switch][interface_name]['bandwidth'],
+                                 'bandwidth': self.port_list[dedicated_switch][port]['bandwidth'],
                                  'description': '',
                                  'adjacent': ''}
-                port_object = Port(name=interface_name, relative_path=self.relative_path[port], **attribute_map)
-                self._add_resource(port_object)
-                self.logger.info('Added ' + interface_name + ' Port')
+                if (self.relative_path.get(port)):
+                    port_object = Port(name=interface_name, relative_path=self.relative_path[port], **attribute_map)
+                    self._add_resource(port_object)
+                    self.logger.info('Added ' + interface_name + ' Port')
         self.logger.info('Load port completed.')
 
     def _get_switches_attributes(self):
