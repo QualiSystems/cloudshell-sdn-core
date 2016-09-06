@@ -94,6 +94,7 @@ class SDNGenericSNMPAutoload():
 
         self.logger.info('*'*10)
         self.logger.info('SNMP discovery Completed')
+
         return result
 
 #
@@ -190,13 +191,13 @@ class SDNGenericSNMPAutoload():
     def _get_switches_attributes(self):
 
         self.logger.info('Start loading Switches')
-        for switch in self.switches_list:
+        for switch in self.leaf_switches_list:
             switch_id = self.relative_path[switch]
             switch_index = self.resource_id[switch]
             module_details_map = {
                 'module_model': '',
                 'version': '',
-                'serial_number': ''
+                'serial_number': switch_index
             }
 
 
