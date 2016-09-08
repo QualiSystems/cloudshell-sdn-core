@@ -20,8 +20,6 @@ class SDNGenericSNMPAutoload():
 
         self._controller = controller_handler
         self.topology = SDNTopologyResolution(self.controller)
-
-
         self.port_list = []
 
         self.relative_path = {}
