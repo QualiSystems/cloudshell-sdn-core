@@ -9,7 +9,7 @@ import json
 import requests
 from requests.auth import HTTPBasicAuth
 from cloudshell.shell.core.context_utils import get_attribute_by_name_wrapper, get_resource_address, \
-    get_decrypted_password_by_attribute_name_wrapper,get_resource_context_attribute,get_resource_port
+    get_decrypted_password_by_attribute_name_wrapper,get_resource_context_attribute
 
 class SDNController(object):
 

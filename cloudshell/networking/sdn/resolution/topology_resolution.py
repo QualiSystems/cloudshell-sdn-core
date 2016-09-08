@@ -10,7 +10,6 @@ __status__ = "Development"
 import networkx as nx
 
 import inject
-from cloudshell.networking.sdn.configuration.cloudshell_controller_binding_keys import CONTROLLER_HANDLER
 
 class SDNTopologyResolution(object):
 

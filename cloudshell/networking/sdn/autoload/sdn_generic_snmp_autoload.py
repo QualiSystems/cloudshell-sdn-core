@@ -12,7 +12,7 @@ from cloudshell.shell.core.driver_context import AutoLoadDetails
 from cloudshell.networking.autoload.networking_autoload_resource_attributes import NetworkingStandardRootAttributes
 from cloudshell.networking.sdn.configuration.cloudshell_controller_configuration import CONTROLLER_HANDLER
 from cloudshell.shell.core.driver_context import AutoLoadAttribute
-from cloudshell.networking.autoload.networking_autoload_resource_structure import Port, Module
+from cloudshell.networking.autoload.networking_autoload_resource_structure import Port, Module,Chassis
 from cloudshell.networking.sdn.resolution.topology_resolution import SDNTopologyResolution
 
 class SDNGenericSNMPAutoload():
@@ -67,9 +67,8 @@ class SDNGenericSNMPAutoload():
 
         self.logger.info('*'*10)
         self.logger.info('Starting SDN SNMP Process')
-        self.get_controller_properies()
-
-
+        self.get_controller_details()
+        #self.get_controller_properies()
         self.get_leaf_switches_list()
         self.get_switches_ports_dict()
         self.build_relative_path()
@@ -97,34 +96,44 @@ class SDNGenericSNMPAutoload():
 
         return result
 
-#
+    def get_controller_details(self):
+        """Get root element attributes
 
-    def get_controller_properies(self):
-
-        controller_id = 0
-
-        self.relative_path['controller'] = controller_id
-
-        data = self.controller.get_query('controllermanager','/properties')
-
-        system_name = data['properties'].get('name')
-        mac_address = data['properties'].get('macAddress')
+        """
 
         self.logger.info('Load Controller Attributes:')
-        result = {'system_name': system_name,
+        result = {'system_name': '',
                   'vendor': self.vendor,
-                  'model': '',
                   'location': '',
                   'contact': 'ODL',
                   'version': ''}
 
+
         root = NetworkingStandardRootAttributes(**result)
 
-        setattr(root,'mac_address', AutoLoadAttribute('', 'Mac Address', mac_address))
+        #setattr(root,'mac_address', AutoLoadAttribute('', 'Mac Address', mac_address))
 
         self.attributes.extend(root.get_autoload_resource_attributes())
         self.logger.info('Load controller Attributes completed.')
+    '''
+    def get_controller_properies(self):
 
+        self.logger.info('Start loading Controller properties')
+
+        self.relative_path['controller'] = 0
+        controller_details_map = {
+            'chassis_model': '',
+            'serial_number': '',
+            'name': 'ODL Controller',
+            'model': 'Generic ODL Controller'
+        }
+
+        relative_path = '{0}'.format(0)
+        chassis_object = Chassis(relative_path='0', **controller_details_map)
+        self._add_resource(chassis_object)
+
+        self.logger.info('Load controller Attributes completed.')
+    '''
     def get_leaf_switches_list(self):
         self.leaf_switches_list = self.topology.get_leaf_switches()
 
@@ -142,7 +151,7 @@ class SDNGenericSNMPAutoload():
         unique_sequence = self.uniqueid()
         for index, switch in enumerate(self.leaf_switches_list, start=1):
             self.resource_id[switch] = int(next(unique_sequence))
-            self.relative_path[switch] = 0
+            self.relative_path[switch] = self.resource_id[switch]
         for dedicated_switch in self.port_list:
             for index, port in enumerate(self.port_list[dedicated_switch], start=1):
                 self.resource_id[port] = int(next(unique_sequence))
@@ -154,17 +163,19 @@ class SDNGenericSNMPAutoload():
         port_list = self.port_list
         switches_list = self.leaf_switches_list
 
-        for switch in switches_list:
-            self.relative_path[switch] = str(self.relative_path[switch]) + '/' + str(self.resource_id[switch])
+        #for switch in switches_list:
+        #    self.relative_path[switch] = str(self.relative_path[switch]) + '/' + str(self.resource_id[switch])
 
-        for dedicated_switch in self.port_list:
-            for port in self.port_list[dedicated_switch]:
+        for dedicated_switch in port_list:
+            for port in port_list[dedicated_switch]:
                 if (self.relative_path.get(port)):
-                    self.relative_path[port] = str(self.relative_path[port]) + '/' + str(self.resource_id[port])
+                    if not type(self.relative_path[port])==str:
+                        self.relative_path[port] = str(self.relative_path[port]) + '/' + str(self.resource_id[port])
 
     def _get_ports_attributes(self):
 
         self.logger.info('Load Ports:')
+        seen = list()
         for dedicated_switch in self.port_list:
             for port in self.port_list[dedicated_switch]:
                 if "-" in port:
@@ -176,13 +187,15 @@ class SDNGenericSNMPAutoload():
                 if interface_name == '':
                     continue
 
-                attribute_map = {'l2_protocol_type': '',
+                attribute_map = {'l2_protocol_type': 1,
                                  'mac': '',
-                                 'mtu': '',
-                                 'bandwidth': self.port_list[dedicated_switch][port]['bandwidth'],
+                                 'mtu': 2,
+                                 'bandwidth': int(self.port_list[dedicated_switch][port]['bandwidth']),
                                  'description': '',
-                                 'adjacent': ''}
-                if (self.relative_path.get(port)):
+                                 'adjacent': '',
+                                 'duplex': 'Full', 'auto_negotiation': 'False'}
+                if (self.relative_path.get(port) and port not in seen):
+                    seen.append(port)
                     port_object = Port(name=interface_name, relative_path=self.relative_path[port], **attribute_map)
                     self._add_resource(port_object)
                     self.logger.info('Added ' + interface_name + ' Port')
@@ -194,16 +207,18 @@ class SDNGenericSNMPAutoload():
         for switch in self.leaf_switches_list:
             switch_id = self.relative_path[switch]
             switch_index = self.resource_id[switch]
+            #'module_model': '',
+            #'version': '',
+            #'serial_number': switch_index
             module_details_map = {
-                'module_model': '',
-                'version': '',
-                'serial_number': switch_index
+
             }
 
 
-            switch_name = 'Sub Module {0}'.format(switch)
-            switch = 'SDN Switch'
-            switch_object = Module(name=switch_name, model=switch, relative_path=switch_id, **module_details_map)
+            switch_name = 'SDN Switch {0}'.format(switch_index)
+            model = 'OpenVSwitch'
+            #switch = 'SDN Switch'
+            switch_object = Module(name=switch_name, model=model, relative_path=switch_id, **module_details_map)
             self._add_resource(switch_object)
 
         self.logger.info('Load switches completed.')
