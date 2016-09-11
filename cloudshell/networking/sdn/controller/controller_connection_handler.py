@@ -8,8 +8,6 @@ __status__ = "Development"
 import json
 import requests
 from requests.auth import HTTPBasicAuth
-from cloudshell.shell.core.context_utils import get_attribute_by_name_wrapper, get_resource_address, \
-    get_decrypted_password_by_attribute_name_wrapper,get_resource_context_attribute
 
 class SDNController(object):
 
@@ -54,18 +52,15 @@ class SDNController(object):
         return data
 
 
-    def post_static_flows(self,switch_id,flow_name,flow_data):
+    def push_static_flow(self,switch_id,flow_name,flow_data):
         self._base_url = self.attributes['utl_prefix'] + self.attributes['ip'] + ':' + \
                          self.attributes['port'] + self.attributes['path']
-        self.url = self._base_url + '/flowprogrammer/default/node/OF/' + switch_id + '/staticFlow/' + flow_name
-        response = requests.post(url=self.url, auth=self.auth,data=json.dumps(flow_data))
+        self.url = self._base_url + 'flowprogrammer/default/node/OF/' + switch_id + '/staticFlow/' + flow_name
+        response = requests.put(url=self.url, data=json.dumps(flow_data), headers={'Content-Type': 'application/json'},auth=self.auth)
 
-        if response.status_code == 200:
-            data = response.json()
-            print data
 
-        else:
+        if response.status_code != 201:
             raise Exception('controller connection handler', 'query response is empty')
 
-        return data
+
 
