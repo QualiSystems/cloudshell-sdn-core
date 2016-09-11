@@ -7,6 +7,7 @@ __status__ = "Development"
 
 import json
 import requests
+import inject
 from requests.auth import HTTPBasicAuth
 
 class SDNController(object):
@@ -28,7 +29,18 @@ class SDNController(object):
         self.auth = None
         self.build_credentials()
 
+        self._logger = None
 
+
+
+    @property
+    def logger(self):
+        if self._logger is None:
+            try:
+                self._logger = inject.instance('logger')
+            except:
+                raise Exception('SDNRoutingResolution', 'Logger is none or empty')
+        return self._logger
 
     def build_credentials(self):
         self.auth = HTTPBasicAuth(self.attributes['username'],self.attributes['password'])
@@ -56,11 +68,14 @@ class SDNController(object):
         self._base_url = self.attributes['utl_prefix'] + self.attributes['ip'] + ':' + \
                          self.attributes['port'] + self.attributes['path']
         self.url = self._base_url + 'flowprogrammer/default/node/OF/' + switch_id + '/staticFlow/' + flow_name
+
+        self.logger.info('Pushing To Controller {0}'.format(self.url))
         response = requests.put(url=self.url, data=json.dumps(flow_data), headers={'Content-Type': 'application/json'},auth=self.auth)
 
-
-        if response.status_code != 201:
+        self.logger.info('Push Status {0}'.format(response.status_code))
+        if response.status_code == 400:
             raise Exception('controller connection handler', 'query response is empty')
 
 
 
+        return response.content
