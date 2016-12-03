@@ -22,7 +22,9 @@ class SDNTopologyResolution(object):
         self.edges = None
         self.topology = None
         self.switches_ports = dict()
+        self.connected_edges = dict()
         self.leaf_switches_list = []
+        self.in_out_ports = dict()
 
         self.build_graph()
 
@@ -53,6 +55,7 @@ class SDNTopologyResolution(object):
         for node in nodes:
             self.graph.add_node(node['node']['id'])
             self.diGraph.add_node(node['node']['id'])
+        self.build_edges_structure()
 
     def get_topology(self):
         self.topology = self.controller.get_query('topology', '')
@@ -101,6 +104,61 @@ class SDNTopologyResolution(object):
         return self.switches_ports
 
 
+    def build_edges_structure(self):
+        for edge in self.edges:
+            headedge_id = edge['edge']['headNodeConnector']['node']['id']
+            tailedge_id = edge['edge']['tailNodeConnector']['node']['id']
+            if not (self.connected_edges.get(headedge_id)):
+                self.connected_edges[headedge_id]={}
+            self.connected_edges[headedge_id].update({tailedge_id:{"out_port":edge['edge']['headNodeConnector']['id'], \
+                                                 "in_port":edge['edge']['tailNodeConnector']['id']}})
+
+
+    def build_ports(self):
+
+        for edge in self.edges:
+            headedge_id = edge['edge']['headNodeConnector']['node']['id']
+            tailedge_id = edge['edge']['tailNodeConnector']['node']['id']
+            self.in_out_ports[headedge_id + "-" + tailedge_id] = edge['edge']['headNodeConnector']['id']
+
+
+
+
+    def compute_the_route_with_ports(self,src_switch,src_switch_port,dst_switch,dst_switch_port,route):
+        json_dict = dict()
+        self.build_ports()
+
+        route_len = len(route)
+        head_to_tail=''
+
+        for indx,switch in enumerate(route):
+            if (self.connected_edges.get(switch)):
+                for tailswitch in self.connected_edges[switch]:
+                    if(indx+1<route_len):
+                        if (tailswitch == route[indx + 1]):
+                            if(indx!=0):
+                                head_to_tail = route[indx-1] + "-"+ switch
+
+                            if(src_switch==switch):
+
+                                json_dict.update({switch:{"in_port":src_switch_port,"out_port": \
+                                    self.connected_edges[switch][tailswitch]['out_port']}})
+
+                            else:
+                                json_dict.update({switch:{"in_port":self.in_out_ports[head_to_tail],"out_port": \
+                                        self.connected_edges[switch][tailswitch]['out_port']}})
+                    else:
+                        if(dst_switch == switch):
+                            json_dict.update({switch: {"in_port": self.in_out_ports[head_to_tail], "out_port": \
+                                dst_switch_port}})
+        return json_dict
+
+
+
+
+
+
+
 import random
 def uniqueid():
     seed = random.getrandbits(32)
@@ -110,7 +168,7 @@ def uniqueid():
 
 if __name__=="__main__":
     from cloudshell.networking.sdn.controller.controller_connection_handler import SDNController
-    CONTROLLER_INIT_PARAMS = {'ip': '192.168.42.203',
+    CONTROLLER_INIT_PARAMS = {'ip': '192.168.42.173',
                               'port': '8080',
                               'username': 'admin',
                               'password': 'admin',
@@ -131,6 +189,10 @@ if __name__=="__main__":
     c_h = create_controller_handler()
     c = SDNTopologyResolution(controller_handler=c_h)
     c.build_graph()
+    print c.edges
+    path = c.get_routing_path_between_two_endpoints("00:00:00:00:00:00:00:03", "00:00:00:00:00:00:00:02")
+    ret = c.compute_the_route_with_ports("00:00:00:00:00:00:00:03",2,"00:00:00:00:00:00:00:02",1,path)
+    print ret
     c.get_switches_ports()
     print c.switches_ports
     print c.get_leaf_switches()
