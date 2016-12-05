@@ -154,8 +154,10 @@ class SDNTopologyResolution(object):
         return json_dict
 
 
-
-
+    def return_route_with_ports(self,src_switch,src_switch_port,dst_switch,dst_switch_port,route):
+        path = self.get_routing_path_between_two_endpoints(src_switch,dst_switch)
+        path_with_ports = self.compute_the_route_with_ports(src_switch,src_switch_port,dst_switch,dst_switch_port,route)
+        return path_with_ports
 
 
 

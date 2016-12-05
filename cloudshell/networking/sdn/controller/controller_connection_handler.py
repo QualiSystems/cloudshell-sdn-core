@@ -9,7 +9,8 @@ import json
 import requests
 import inject
 from requests.auth import HTTPBasicAuth
-
+from cloudshell.core.logger.qs_logger import get_qs_logger
+Logger = get_qs_logger()
 class SDNController(object):
 
 
@@ -29,7 +30,7 @@ class SDNController(object):
         self.auth = None
         self.build_credentials()
 
-        self._logger = None
+        self._logger = Logger
 
 
 
