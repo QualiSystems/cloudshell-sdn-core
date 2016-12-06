@@ -119,7 +119,7 @@ class SDNTopologyResolution(object):
         for edge in self.edges:
             headedge_id = edge['edge']['headNodeConnector']['node']['id']
             tailedge_id = edge['edge']['tailNodeConnector']['node']['id']
-            self.in_out_ports[headedge_id + "-" + tailedge_id] = edge['edge']['headNodeConnector']['id']
+            self.in_out_ports[headedge_id + "-" + tailedge_id] = edge['edge']['tailNodeConnector']['id']
 
 
 
@@ -137,7 +137,7 @@ class SDNTopologyResolution(object):
                     if(indx+1<route_len):
                         if (tailswitch == route[indx + 1]):
                             if(indx!=0):
-                                head_to_tail = route[indx-1] + "-"+ switch
+                                head_to_tail = route[indx - 1] + "-"+ switch
 
                             if(src_switch==switch):
 
@@ -148,6 +148,8 @@ class SDNTopologyResolution(object):
                                 json_dict.update({switch:{"in_port":self.in_out_ports[head_to_tail],"out_port": \
                                         self.connected_edges[switch][tailswitch]['out_port']}})
                     else:
+                        if (indx != 0):
+                            head_to_tail = route[indx - 1] + "-" + switch
                         if(dst_switch == switch):
                             json_dict.update({switch: {"in_port": self.in_out_ports[head_to_tail], "out_port": \
                                 dst_switch_port}})

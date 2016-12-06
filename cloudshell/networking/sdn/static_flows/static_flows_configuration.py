@@ -99,6 +99,12 @@ class InstallStaticFlows(object):
         route,dst_switch,dst_port = self.return_path_if_path_exists(switch_id)
         if (len(route)>0):
             self.send_route_to_ctrl(switch_id,port,dst_switch,dst_port,route)
+        if(dst_switch!=''):
+            switch_id = dst_switch
+            port = dst_port
+            route, dst_switch, dst_port = self.return_path_if_path_exists(switch_id)
+            if (len(route) > 0):
+                self.send_route_to_ctrl(switch_id,port,dst_switch,dst_port,route)
         return response
 
     def save_installed_flow_into_file(self,switch_id,port):
@@ -134,7 +140,9 @@ class InstallStaticFlows(object):
         data_dict = dict()
         data_dict["route"] = {}
         for indx,switch in enumerate(route_with_ports):
-            data_dict["route"].update({"switch" + str(indx): switch})
+            switchid = switch.split(":")[-1]
+            switchid = int(switchid,16)
+            data_dict["route"].update({"switch" + str(indx): switchid})
             data_dict["route"].update({"port" + str(indx): '%s-%s'%(route_with_ports[switch]["in_port"],route_with_ports[switch]["out_port"])})
         data = json.dumps(data_dict)
         _base_url = "http://192.168.42.173:8080/controller/nb/v2/myroutes/shellroute/sourcenode/%s/sourceport/%s/%s" % (
@@ -164,6 +172,9 @@ if __name__=="__main__":
 
     c_h = create_controller_handler()
     c = InstallStaticFlows(controller_handler=c_h)
+    #res=c.route_resolution.compute_the_route_with_ports("00:00:00:00:00:00:00:02",1,"00:00:00:00:00:00:00:03", 2\
+    #                                                    ,["00:00:00:00:00:00:00:03","00:00:00:00:00:00:00:01","00:00:00:00:00:00:00:02"])
+    #print res
     c.static_flow_pusher("flo11", "00:00:00:00:00:00:00:02",1)
     c.static_flow_pusher("flo111", "00:00:00:00:00:00:00:03", 2)
     #c.save_installed_flow_into_file("00:00:00:00:00:00:00:01","10.0.0.1","10.0.0.22")
