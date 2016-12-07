@@ -23,8 +23,8 @@ class InstallStaticFlows(object):
 
         self._controller = controller_handler
         self._logger = Logger
-        self.route_resolution = SDNTopologyResolution(self._controller,self._logger)
-        self.initialize_folder()
+        self.route_resolution = SDNTopologyResolution(self.controller,self._logger)
+        #self.initialize_folder()
 
 
 
@@ -110,12 +110,16 @@ class InstallStaticFlows(object):
     def save_installed_flow_into_file(self,switch_id,port):
 
             working_dir = os.path.dirname(os.path.abspath(__file__))
-            if (os.path.isdir(working_dir + "/installed_flows")):
-                filename= working_dir + "/installed_flows/flows.txt"
-                #if not os.path.exists(filename):
-                f = file(filename, "a+")
-                f.write("%s,%s"%(switch_id,port) + "\n")
-                f.close()
+
+
+            if not (os.path.isdir(working_dir + "/installed_flows")):
+                os.makedirs(working_dir + "/installed_flows")
+
+            filename= working_dir + "/installed_flows/flows.txt"
+            #if not os.path.exists(filename):
+            f = file(filename, "a+")
+            f.write("%s,%s"%(switch_id,port) + "\n")
+            f.close()
 
 
     def return_path_if_path_exists(self,switch_id):
