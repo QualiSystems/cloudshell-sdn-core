@@ -6,7 +6,6 @@ __email__ = "luiza.n@quali.com"
 __status__ = "Development"
 
 import re
-import inject
 import random
 from cloudshell.shell.core.driver_context import AutoLoadDetails
 from cloudshell.networking.autoload.networking_autoload_resource_attributes import NetworkingStandardRootAttributes
@@ -34,28 +33,6 @@ class SDNGenericSNMPAutoload():
 
         self._logger = logger
         self._excluded_models = []
-
-
-    @property
-    def logger(self):
-        if self._logger is None:
-            try:
-                self._logger = inject.instance('logger')
-            except:
-                raise Exception('SDNAutoload', 'Logger is none or empty')
-        return self._logger
-
-
-    @property
-    def controller(self):
-        if self._controller is None:
-            try:
-                self._controller = inject.instance(CONTROLLER_HANDLER)
-            except:
-                raise Exception('SDNAutoload', 'controller handler is none or empty')
-        return self._controller
-
-
 
     def discover(self):
         """Load device structure and attributes: chassis, modules, submodules, ports, port-channels and power supplies
