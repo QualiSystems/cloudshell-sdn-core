@@ -17,5 +17,5 @@ setup(
     install_requires=required,
     version=version_from_file,
     description='QualiSystems Python package',
-    include_package_data = True
+    include_package_data=True
 )

@@ -1,33 +1,25 @@
-__author__ = "Luiza Nacshon"
-__copyright__ = ""
-__license__ = ""
-__version__ = "1.0.0"
-__email__ = "luiza.n@quali.com"
-__status__ = "Development"
-
-
+import collections
 
 import networkx as nx
-
 import inject
+import random
+
 
 class SDNTopologyResolution(object):
-
     def __init__(self, controller_handler=None, logger=None):
-
         self.controller = controller_handler
         self.switches_list = []
         self.graph = None
         self.diGraph = None
         self.edges = None
         self.topology = None
+        self._logger = logger
         self.switches_ports = dict()
         self.connected_edges = dict()
         self.leaf_switches_list = []
         self.in_out_ports = dict()
 
         self.build_graph()
-
 
     @property
     def logger(self):
@@ -37,7 +29,6 @@ class SDNTopologyResolution(object):
             except:
                 raise Exception('SDNRoutingResolution', 'Logger is none or empty')
         return self._logger
-
 
     def build_graph(self):
         self.graph = nx.Graph()
@@ -74,150 +65,96 @@ class SDNTopologyResolution(object):
 
     def get_leaf_switches(self):
         leaf_switches_tuple = self.lowest_centrality(nx.betweenness_centrality(self.graph, endpoints=True))
-        map(lambda x: self.leaf_switches_list.append(x[1]) if x[1] not in self.leaf_switches_list else False, leaf_switches_tuple)
+        map(lambda x: self.leaf_switches_list.append(x[1]) if x[1] not in self.leaf_switches_list else False,
+            leaf_switches_tuple)
         return self.leaf_switches_list
 
-
-
-    def lowest_centrality(self,centrality_dict):
+    def lowest_centrality(self, centrality_dict):
         cent_items = [(b, a) for (a, b) in centrality_dict.iteritems() if b == min(centrality_dict.values())]
         cent_items.sort()
         return cent_items
 
-
-
-    def get_routing_path_between_two_endpoints(self,srcNode,dstNode):
+    def get_routing_path_between_two_endpoints(self, srcNode, dstNode):
         path = nx.dijkstra_path(self.graph, srcNode, dstNode)
         return path
 
-
     def get_switches_ports(self):
-        for edge in self.edges:
-            headedge_id = edge['edge']['headNodeConnector']['node']['id']
-            tailedge_id = edge['edge']['tailNodeConnector']['node']['id']
-            if(self.switches_ports.get(headedge_id)==None):
-                self.switches_ports[headedge_id] = {}
-            self.switches_ports[headedge_id][edge['properties']['name']['value']] = {'bandwidth':edge['properties']['bandwidth']['value']}
-            if(self.switches_ports.get(tailedge_id)==None):
-                self.switches_ports[tailedge_id] = {}
-            self.switches_ports[tailedge_id][edge['properties']['name']['value']] = {'bandwidth':edge['properties']['bandwidth']['value']}
-        return self.switches_ports
+        for switch_id in self.leaf_switches_list:
+            connectors = self.controller.get_query('switchmanager', '/node/OF/{}'.format(switch_id))
+            self.switches_ports[switch_id] = {}
+            for connector in connectors["nodeConnectorProperties"]:
+                if "bandwidth" not in connector['properties']:
+                    continue  # connector is a switch itself, skip it
 
+                port_name = connector['properties']['name']['value']
+
+                for edge in self.edges:
+                    if port_name == edge['properties']['name']['value']:
+                        break  # exclude trunk ports
+                else:
+                    self.switches_ports[switch_id][connector["nodeconnector"]["id"]] = {
+                        "bandwidth": connector['properties']['bandwidth']['value'],
+                        "name": port_name
+                    }
+
+        return self.switches_ports
 
     def build_edges_structure(self):
         for edge in self.edges:
             headedge_id = edge['edge']['headNodeConnector']['node']['id']
             tailedge_id = edge['edge']['tailNodeConnector']['node']['id']
             if not (self.connected_edges.get(headedge_id)):
-                self.connected_edges[headedge_id]={}
-            self.connected_edges[headedge_id].update({tailedge_id:{"out_port":edge['edge']['headNodeConnector']['id'], \
-                                                 "in_port":edge['edge']['tailNodeConnector']['id']}})
-
+                self.connected_edges[headedge_id] = {}
+            self.connected_edges[headedge_id].update({tailedge_id: {"out_port": edge['edge']['headNodeConnector']['id'], \
+                                                                    "in_port": edge['edge']['tailNodeConnector'][
+                                                                        'id']}})
 
     def build_ports(self):
-
         for edge in self.edges:
             headedge_id = edge['edge']['headNodeConnector']['node']['id']
             tailedge_id = edge['edge']['tailNodeConnector']['node']['id']
             self.in_out_ports[headedge_id + "-" + tailedge_id] = edge['edge']['tailNodeConnector']['id']
 
-
-
-
-    def compute_the_route_with_ports(self,src_switch,src_switch_port,dst_switch,dst_switch_port,route):
-        json_dict = dict()
+    def compute_the_route_with_ports(self, src_switch, src_switch_port, dst_switch, dst_switch_port, route):
+        json_dict = collections.OrderedDict()
         self.build_ports()
 
         route_len = len(route)
-        head_to_tail=''
+        head_to_tail = ''
 
-        for indx,switch in enumerate(route):
+        for indx, switch in enumerate(route):
             if (self.connected_edges.get(switch)):
                 for tailswitch in self.connected_edges[switch]:
-                    if(indx+1<route_len):
+                    if (indx + 1 < route_len):
                         if (tailswitch == route[indx + 1]):
-                            if(indx!=0):
-                                head_to_tail = route[indx - 1] + "-"+ switch
+                            if (indx != 0):
+                                head_to_tail = route[indx - 1] + "-" + switch
 
-                            if(src_switch==switch):
+                            if (src_switch == switch):
 
-                                json_dict.update({switch:{"in_port":src_switch_port,"out_port": \
+                                json_dict.update({switch: {"in_port": src_switch_port, "out_port": \
                                     self.connected_edges[switch][tailswitch]['out_port']}})
 
                             else:
-                                json_dict.update({switch:{"in_port":self.in_out_ports[head_to_tail],"out_port": \
-                                        self.connected_edges[switch][tailswitch]['out_port']}})
+                                json_dict.update({switch: {"in_port": self.in_out_ports[head_to_tail], "out_port": \
+                                    self.connected_edges[switch][tailswitch]['out_port']}})
                     else:
                         if (indx != 0):
                             head_to_tail = route[indx - 1] + "-" + switch
-                        if(dst_switch == switch):
+                        if (dst_switch == switch):
                             json_dict.update({switch: {"in_port": self.in_out_ports[head_to_tail], "out_port": \
                                 dst_switch_port}})
         return json_dict
 
-
-    def return_route_with_ports(self,src_switch,src_switch_port,dst_switch,dst_switch_port,route):
-        path = self.get_routing_path_between_two_endpoints(src_switch,dst_switch)
-        path_with_ports = self.compute_the_route_with_ports(src_switch,src_switch_port,dst_switch,dst_switch_port,route)
+    def return_route_with_ports(self, src_switch, src_switch_port, dst_switch, dst_switch_port, route):
+        path = self.get_routing_path_between_two_endpoints(src_switch, dst_switch)
+        path_with_ports = self.compute_the_route_with_ports(src_switch, src_switch_port, dst_switch, dst_switch_port,
+                                                            route)
         return path_with_ports
 
 
-
-import random
 def uniqueid():
     seed = random.getrandbits(32)
     while True:
-       yield seed
-       seed += 1
-
-if __name__=="__main__":
-    from cloudshell.networking.sdn.controller.controller_connection_handler import SDNController
-    CONTROLLER_INIT_PARAMS = {'ip': '192.168.42.173',
-                              'port': '8080',
-                              'username': 'admin',
-                              'password': 'admin',
-                              'path': '/controller/nb/v2/',
-                              'container': 'default',
-                              'utl_prefix': 'http://'}
-
-
-    def create_controller_handler():
-        kwargs = {}
-        for key, value in CONTROLLER_INIT_PARAMS.iteritems():
-            if callable(value):
-                kwargs[key] = value()
-            else:
-                kwargs[key] = value
-        return SDNController(**kwargs)
-
-    c_h = create_controller_handler()
-    c = SDNTopologyResolution(controller_handler=c_h)
-    c.build_graph()
-    print c.edges
-    path = c.get_routing_path_between_two_endpoints("00:00:00:00:00:00:00:03", "00:00:00:00:00:00:00:02")
-    ret = c.compute_the_route_with_ports("00:00:00:00:00:00:00:03",2,"00:00:00:00:00:00:00:02",1,path)
-    print ret
-    c.get_switches_ports()
-    print c.switches_ports
-    print c.get_leaf_switches()
-    resource_id = dict()
-    relative_path = dict()
-    unique_sequence = uniqueid()
-    for index,switch in enumerate(c.leaf_switches_list, start=1):
-        resource_id[switch] = int(next(unique_sequence))
-        relative_path[switch] = 0
-
-    for dedicated_switch in c.switches_ports:
-        for index,port in enumerate(c.switches_ports[dedicated_switch],start=1):
-            resource_id[port] = int(next(unique_sequence))
-            if resource_id.get(dedicated_switch) is not None:
-                relative_path[port] = resource_id.get(dedicated_switch)
-
-
-
-
-
-
-
-
-
+        yield seed
+        seed += 1
