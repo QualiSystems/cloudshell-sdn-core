@@ -64,5 +64,19 @@ class SDNController(object):
         url = self._base_url + "myroutes/shellroute/sourcenode/{}/sourceport/{}/{}".format(
             src_switch, src_switch_port, data)
 
-        return requests.get(url=url, headers={'Content-Type': 'application/json'},
-                            auth=requests.auth.HTTPBasicAuth('admin', 'admin'))
+        return requests.get(url=url, headers={'Content-Type': 'application/json'}, auth=self.auth)
+
+    def delete_flow(self, src_switch, flow_name):
+        """Delete flow entry on the controller"""
+        url = self._base_url + 'flowprogrammer/default/node/OF/' + src_switch + '/staticFlow/' + flow_name
+
+        return requests.delete(url=url, headers={'Content-Type': 'application/json'},
+                               auth=self.auth)
+
+    def delete_route(self, src_switch, src_switch_port):
+        """Delete route file saved in the controller file system"""
+        url = self._base_url + "myroutes/shellroute/sourcenode/{}/sourceport/{}".format(
+            src_switch, src_switch_port)
+
+        return requests.delete(url=url, headers={'Content-Type': 'application/json'},
+                               auth=self.auth)

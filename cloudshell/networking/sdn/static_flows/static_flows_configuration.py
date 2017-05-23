@@ -89,6 +89,12 @@ class InstallStaticFlows(object):
                 self.send_route_to_ctrl(switch_id, port, dst_switch, dst_port, route)
         return response
 
+    def delete_static_flow(self, flow_name, switch_id, port):
+        self.logger.info("Deleting flow {} for {}p{}...".format(flow_name, switch_id, port))
+        self.controller.delete_flow(src_switch=switch_id, flow_name=flow_name)
+        self.controller.delete_route(src_switch=switch_id, src_switch_port=port)
+        self.logger.info("Flow {} for {}p{} was successfully deleted".format(flow_name, switch_id, port))
+
     def save_installed_flow_into_file(self, switch_id, port):
 
         working_dir = os.path.dirname(os.path.abspath(__file__))

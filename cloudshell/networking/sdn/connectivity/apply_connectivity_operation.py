@@ -47,6 +47,16 @@ class ApplyConnectivityOperation(InstallStaticFlows):
         result_for_output = str(json)
         return result_for_output
 
+    def _prepare_action_result(self, action):
+        action_result = ActionResult()
+        action_result.type = action.type
+        action_result.actionId = action.actionId
+        action_result.errorMessage = None
+        action_result.infoMessage = None
+        action_result.updatedInterface = action.actionTarget.fullName
+
+        return action_result
+
     def apply_connectivity_changes(self, request):
         self.logger.info("Apply connectivity request:\n {}".format(request))
 
@@ -76,24 +86,13 @@ class ApplyConnectivityOperation(InstallStaticFlows):
         for actions in connects.itervalues():
             if len(actions) != 2:
                 action = actions[0]
-                action_result = ActionResult()
-                action_result.type = action.type
-                action_result.actionId = action.actionId
+                action_result = self._prepare_action_result(action)
                 action_result.errorMessage = "Can't find another switch to connect to"
-                action_result.infoMessage = None
-                action_result.updatedInterface = action.actionTarget.fullName
-
                 request_result.append(action_result)
-
                 continue
 
             for action in actions:
-                action_result = ActionResult()
-                action_result.type = action.type
-                action_result.actionId = action.actionId
-                action_result.errorMessage = None
-                action_result.infoMessage = None
-                action_result.updatedInterface = action.actionTarget.fullName
+                action_result = self._prepare_action_result(action)
 
                 full_addr = action.actionTarget.fullAddress
                 full_name = action.actionTarget.fullName
@@ -113,9 +112,34 @@ class ApplyConnectivityOperation(InstallStaticFlows):
 
                 request_result.append(action_result)
 
-        for actions in disconnects.iteritems():
+        for actions in disconnects.itervalues():
+            if len(actions) != 2:
+                action = actions[0]
+                action_result = self._prepare_action_result(action)
+                action_result.errorMessage = "Can't find another switch to disconnect from"
+                request_result.append(action_result)
+                continue
+
             for action in actions:
-                pass
+                action_result = self._prepare_action_result(action)
+
+                full_addr = action.actionTarget.fullAddress
+                full_name = action.actionTarget.fullName
+                full_addr_parts = full_addr.split("/")
+                src_port = full_addr_parts[-1]
+                switch_id = full_addr_parts[-2]
+                port_name = full_name.split("/")[-1]
+
+                try:
+                    self.delete_static_flow(flow_name=port_name, switch_id=switch_id, port=src_port)
+
+                except Exception:
+                    action_result.errorMessage = "Failed to disconnect {}".format(full_name)
+
+                else:
+                    action_result.infoMessage = "Successfully disconnected {}".format(full_name)
+
+                request_result.append(action_result)
 
         driver_response.actionResults = request_result
         driver_response_root.driverResponse = driver_response
