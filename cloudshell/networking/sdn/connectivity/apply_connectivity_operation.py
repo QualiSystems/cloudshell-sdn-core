@@ -112,6 +112,8 @@ class ApplyConnectivityOperation(InstallStaticFlows):
 
                 request_result.append(action_result)
 
+            self.remove_static_files_folder()
+
         for actions in disconnects.itervalues():
             if len(actions) != 2:
                 action = actions[0]

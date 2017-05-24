@@ -17,19 +17,14 @@ class InstallStaticFlows(object):
     @property
     def logger(self):
         if self._logger is None:
-            # try:
-                self._logger = inject.instance('logger')
-            # except:
-            #     raise Exception('SDNRoutingResolution', 'Logger is none or empty')
+            self._logger = inject.instance('logger')
         return self._logger
 
     @property
     def controller(self):
         if self._controller is None:
-            # try:
-                self._controller = inject.instance(CONTROLLER_HANDLER)
-            # except:
-            #     raise Exception('SDNAutoload', 'controller handler is none or empty')
+            self._controller = inject.instance(CONTROLLER_HANDLER)
+
         return self._controller
 
     def initialize_folder(self):
@@ -88,6 +83,12 @@ class InstallStaticFlows(object):
             if (len(route) > 0):
                 self.send_route_to_ctrl(switch_id, port, dst_switch, dst_port, route)
         return response
+
+    def remove_static_files_folder(self):
+        working_dir = os.path.dirname(os.path.abspath(__file__))
+        installed_flows_folder = working_dir + "/installed_flows"
+        if os.path.isdir(installed_flows_folder):
+            shutil.rmtree(installed_flows_folder)
 
     def delete_static_flow(self, flow_name, switch_id, port):
         self.logger.info("Deleting flow {} for {}p{}...".format(flow_name, switch_id, port))
