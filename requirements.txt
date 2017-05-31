@@ -6,3 +6,4 @@ cloudshell-networking>=2.1,<2.2
 cloudshell-cli>=2.1,<2.2
 cloudshell-snmp>=2.1,<2.2
 cloudshell-automation-api>=7.0,<7.1
+cloudshell-shell-core>=2.1,<2.2
