@@ -37,15 +37,9 @@ class SDNController(object):
         self.url = self._base_url + northbound_api_component + '/' + self.attributes['container'] + query
 
         response = requests.get(url=self.url, auth=self.auth)
+        response.raise_for_status()
 
-        if response.status_code == 200:
-            data = response.json()
-            print data
-
-        else:
-            raise Exception('controller connection handler', 'query response is empty')
-
-        return data
+        return response.json()
 
     def push_static_flow(self, switch_id, flow_name, flow_data):
         self.url = self._base_url + 'flowprogrammer/default/node/OF/' + switch_id + '/staticFlow/' + flow_name
@@ -55,8 +49,7 @@ class SDNController(object):
                                 auth=self.auth)
 
         self.logger.info('Push Status {0}'.format(response.status_code))
-        if response.status_code == 400:
-            raise Exception('controller connection handler', 'query response is empty')
+        response.raise_for_status()
 
         return response.content
 
